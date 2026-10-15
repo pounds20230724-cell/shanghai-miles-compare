@@ -2,7 +2,6 @@
 # -*- coding: utf-8 -*-
 """生成《上海出发·里程票综合对比表》—— 单表整合：里程 / 税费 / 现金票价 / 里程价值 / 火车 / 时间 / 综合建议"""
 import re, os
-import os
 HERE = os.path.dirname(os.path.abspath(__file__))
 OUT  = os.path.normpath(os.path.join(HERE, '..'))
 
@@ -26,7 +25,24 @@ def fmt(t): return f"{t[0]:,} / {t[1]:,}"
 rows = []
 n_good = n_up = n_tie = n_rail = n_bad = 0
 
-def emit(city, reg, d, dr, eco_miles, eco_name, biz_miles, tax,
+def build_air_cells(airs):
+    """airs: [(名称, (经济,公务) 或 None, 是否理论值)] → 三列 HTML
+    绿＝经济舱三家最低；紫＝公务舱三家最低；理论值（南航国际）不参与最低比较"""
+    comparable = [(n, t) for n, t, th in airs if t and not th]
+    min_e = min((t[0] for _, t in comparable), default=None)
+    min_b = min((t[1] for _, t in comparable), default=None)
+    out = []
+    for name, t, th in airs:
+        if not t:
+            out.append('<td class="num air"><span class="dim">—</span></td>')
+            continue
+        e = f'<span class="{"be" if (not th and min_e is not None and t[0] == min_e) else "pe"}">{t[0]:,}</span>'
+        b = f'<span class="{"bb" if (not th and min_b is not None and t[1] == min_b) else "pb"}">{t[1]:,}</span>'
+        tip = ' title="南航国际为距离制理论值（上海无洲际直飞），仅供参考"' if th else ''
+        out.append(f'<td class="num air{" theory" if th else ""}"{tip}>{e}<span class="h">/</span>{b}</td>')
+    return ''.join(out)
+
+def emit(city, reg, d, dr, airs, eco_miles, eco_name, biz_miles, tax,
          cash_eco, cash_biz_val, val_eco, val_biz, rail, ft):
     """经济舱优先 · 阈值：经济>500；公务>1000 且 ≥经济2倍；火车与飞机比现金票"""
     global n_good, n_up, n_tie, n_rail, n_bad
@@ -68,21 +84,20 @@ def emit(city, reg, d, dr, eco_miles, eco_name, biz_miles, tax,
     dirb = {'y':'<span class="yes">●</span>','s':'<span class="q">○</span>','n':''}[dcode]
     ce = 'v-good' if val_eco > 500 else ('v-mid' if val_eco > 350 else 'v-bad')
     cb = 'v-good' if (val_biz > 1000 and val_biz >= 2 * val_eco) else ('v-mid' if val_biz > 800 else 'v-bad')
-    up_note = f'<span class="upn">升公务 +{up_miles:,}</span>' if rcls == 'up' else ''
+    up_note = f'<span class="upn">升公务 +{up_miles:,} · 增益 {up_val:,}/万</span>' if rcls == 'up' else ''
     rows.append(
         f'<tr data-k="{city}" data-reg="{reg}" data-direct="{dcode}" data-d="{d}" '
         f'data-air="{eco_name}" data-rec="{rcls}" data-val="{val_eco}" data-valb="{val_biz}" data-up="{up_miles}">'
         f'<td class="c-city"><b>{city}</b><span class="reg">{reg}</span></td>'
         f'<td class="num">{d:,}</td>'
         f'<td class="ctr">{dirb}</td>'
-        f'<td><span class="tag {CLS[eco_name]}">{eco_name}</span></td>'
-        f'<td class="num">{eco_miles:,}<span class="h">/</span>{biz_miles:,}{up_note}</td>'
+        f'{build_air_cells(airs)}'
         f'<td class="num">¥{tax:,}</td>'
         f'<td class="num">¥{cash_eco:,}<span class="h">/</span>¥{cash_biz_val:,}</td>'
         f'<td class="num"><b class="{ce}">{val_eco:,}</b><span class="h">/</span><b class="{cb}">{val_biz:,}</b></td>'
         f'<td class="num">{rail_cell}</td>'
         f'<td class="num">{ft}h</td>'
-        f'<td class="vd"><span class="tag {rcls}">{rec}</span><span class="sub">{train_line}</span></td>'
+        f'<td class="vd"><span class="tag {rcls}">{rec}</span>{up_note}<span class="sub">{train_line}</span></td>'
         f'</tr>')
 
 # ---------- 国内 ----------
@@ -95,7 +110,9 @@ for city, d in DOMESTIC:
     cash_eco = cash_dom(d); cash_bv = cash_biz(cash_eco, False)
     val_eco = mile_value(cash_eco, tax, eco_miles)
     val_biz = mile_value(cash_bv, tax, biz_miles)
-    emit(city, '国内', d, dom_direct(city), eco_miles, eco_name, biz_miles,
+    emit(city, '国内', d, dom_direct(city),
+         [('国航', ca, False), ('东航', mu, False), ('南航', cz, False)],
+         eco_miles, eco_name, biz_miles,
          tax, cash_eco, cash_bv, val_eco, val_biz, rail_info(city), fly_total(d, False))
 
 # ---------- 国际（最优不含南航理论值） ----------
@@ -110,7 +127,9 @@ for region, city, d, caz, muz, direct in INTL:
     cash_eco = cash_intl(d); cash_bv = cash_biz(cash_eco, True)
     val_eco = mile_value(cash_eco, tax, eco_miles)
     val_biz = mile_value(cash_bv, tax, biz_miles)
-    emit(city, region, d, direct, eco_miles, eco_name, biz_miles,
+    emit(city, region, d, direct,
+         [('国航', ca, False), ('东航', mu, False), ('南航', cz, True)],
+         eco_miles, eco_name, biz_miles,
          tax, cash_eco, cash_bv, val_eco, val_biz, None, fly_total(d, True))
 
 rows_html = ''.join(rows)
@@ -163,7 +182,7 @@ details[open] summary{border-bottom:1px solid var(--line)}
 .doc br{display:block;content:'';margin-top:3px}
 /* ---- 表格 ---- */
 .tw{margin-top:10px;border:1px solid var(--line);border-radius:var(--rad);background:#fff;overflow:auto;max-height:76vh}
-table{width:100%;border-collapse:separate;border-spacing:0;font-size:12.3px;min-width:1010px}
+table{width:100%;border-collapse:separate;border-spacing:0;font-size:12.3px;min-width:1220px}
 th,td{padding:6px 9px;text-align:left;border-bottom:1px solid var(--line);vertical-align:middle;white-space:nowrap}
 thead th{background:#242b36;color:#dfe5ee;font-weight:700;font-size:11.5px;position:sticky;top:0;z-index:6;cursor:pointer;user-select:none}
 thead th:hover{background:#2c3542}
@@ -179,6 +198,10 @@ tbody tr:nth-child(even) td:first-child{background:#fafbfc}
 tbody tr:hover td:first-child{background:#eef4fc}
 td.num{font-variant-numeric:tabular-nums}
 td.ctr{text-align:center}
+.pe,.pb{color:#7c8694}
+.be{color:var(--ok);font-weight:800}
+.bb{color:var(--up);font-weight:800}
+td.air.theory .pe,td.air.theory .pb{color:#c9d0da}
 .h{color:#c3cad6;margin:0 3px;font-weight:400}
 .dim{color:#b0b7c3}
 .c-city b{font-size:12.6px}
@@ -307,7 +330,7 @@ BODY = f"""<!DOCTYPE html>
 <details>
 <summary>口径与判定规则</summary>
 <div class="doc">
-<b>里程</b>＝三家官方标准兑换表单程值（经济/公务）；国内三家可比，国际仅国航+东航（南航在上海无洲际直飞）。<br>
+<b>里程</b>＝三家官方标准兑换表单程值（经济/公务），每行<b>三列分列完整展示</b>：<b style="color:#0F766E">绿字</b>＝经济舱三家最低，<b style="color:#7A1FA2">紫字</b>＝公务舱三家最低，灰字为其余报价。<b>南航*</b>：国际航线为距离制换算的理论值（上海无南航洲际直飞），灰色显示、不参与"最低"比较，仅供对照。<br>
 <b>税费</b>＝民航发展基金 50 + 燃油附加费（≤800km 50 / &gt;800km 90）→ 国内 ¥100/¥140；国际按区域中值（港澳台 250、日韩 350、东南亚 400、南亚中亚 600、北美 1,000、大洋洲 1,100、欧洲 1,400、非洲南美 1,300）。<br>
 <b>现金票</b>＝一般折扣价（排除红眼航班与廉航特价）：国内 300+0.25×距离；国际 ≤3,000km 800+0.24×距离、&gt;3,000km 分段；公务舱＝经济舱 ×3（国内）/ ×4（国际）。<br>
 <b>里程价值（元/万）</b>＝（现金票 − 税费）÷ 里程 × 10,000，即"每用一万里程能省多少钱"。<br>
@@ -336,9 +359,9 @@ BODY = f"""<!DOCTYPE html>
       <option value="2000-3000">2,000–3,000</option><option value="3000-5000">3,000–5,000</option>
       <option value="5000-99999">&gt;5,000km</option>
     </select>
-    <select id="fa" class="sel">
-      <option value="">最优航司不限</option><option value="国航">国航</option>
-      <option value="东航">东航</option><option value="南航">南航</option>
+    <select id="fa" class="sel" title="筛出某家航司经济舱里程最划算的航线">
+      <option value="">航司不限</option><option value="国航">国航最优</option>
+      <option value="东航">东航最优</option><option value="南航">南航最优</option>
     </select>
     <select id="frec" class="sel">
       <option value="">建议不限</option><option value="good">✅ 里程换经济</option>
@@ -365,15 +388,16 @@ BODY = f"""<!DOCTYPE html>
     <span><i class="dot d-r"></i>火车 <b id="cnt-rail">0</b></span>
     <span><i class="dot d-b"></i>买票 <b id="cnt-bad">0</b></span>
     <span class="spacer"></span>
-    <span class="hint">点列头排序 · 选建议或航线可叠加筛选</span>
+    <span class="hint">点列头可排序 · 航司筛选＝该航司经济舱里程最划算 · 绿/紫＝三家最低</span>
   </div>
 </div>
 
 <div class="tw">
 <table id="master">
 <thead><tr>
-  <th>目的地</th><th>距离<br>km</th><th>直飞</th><th>最优航司</th>
-  <th>里程 经/公</th><th>税费</th><th>现金票 经/公</th><th>里程价值 经/公<br>元/万</th>
+  <th>目的地</th><th>距离<br>km</th><th>直飞</th>
+  <th>国航<br>经/公</th><th>东航<br>经/公</th><th>南航*<br>经/公</th>
+  <th>税费</th><th>现金票 经/公</th><th>里程价值 经/公<br>元/万</th>
   <th>火车</th><th>飞行<br>+值机</th><th>建议</th>
 </tr></thead>
 <tbody>
