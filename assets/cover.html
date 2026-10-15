@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<style>
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{width:1080px;height:1440px;overflow:hidden;
+    font-family:"PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;
+    background:#0e131b;color:#fff;position:relative}
+  /* 背景光晕 */
+  .glow{position:absolute;border-radius:50%;filter:blur(120px);opacity:.5}
+  .g1{width:760px;height:760px;background:#1D4E9E;top:-260px;right:-200px}
+  .g2{width:620px;height:620px;background:#C8102E;bottom:-220px;left:-180px;opacity:.34}
+  .g3{width:520px;height:520px;background:#0F766E;top:520px;left:60px;opacity:.28}
+  .wrap{position:relative;z-index:2;padding:96px 84px;height:100%;display:flex;flex-direction:column}
+  .tag{display:inline-block;align-self:flex-start;font-size:26px;font-weight:700;letter-spacing:.06em;
+    color:#7fd4c8;border:2px solid rgba(127,212,200,.45);border-radius:999px;padding:10px 26px}
+  h1{font-size:92px;line-height:1.18;font-weight:900;letter-spacing:-.01em;margin-top:52px}
+  h1 em{font-style:normal;color:#ff6b7f}
+  h1 span{color:#8fc4ff}
+  .sub{font-size:34px;color:#a9b6c8;margin-top:34px;line-height:1.5;font-weight:500}
+  .sub b{color:#fff;font-weight:800}
+  .cards{margin-top:auto;display:flex;flex-direction:column;gap:22px}
+  .card{background:rgba(255,255,255,.07);border:1.5px solid rgba(255,255,255,.14);
+    border-radius:22px;padding:30px 34px;display:flex;align-items:center;gap:26px}
+  .ic{width:66px;height:66px;border-radius:16px;flex:0 0 66px;display:flex;align-items:center;
+    justify-content:center;font-size:32px}
+  .i1{background:rgba(15,118,110,.28)}
+  .i2{background:rgba(122,31,162,.28)}
+  .i3{background:rgba(29,78,158,.3)}
+  .ct{font-size:31px;font-weight:800;line-height:1.35}
+  .ct small{display:block;font-size:24px;font-weight:500;color:#93a0b3;margin-top:5px}
+  .foot{margin-top:44px;padding-top:32px;border-top:1.5px solid rgba(255,255,255,.13);
+    display:flex;justify-content:space-between;align-items:center;font-size:27px;color:#8b98ab;font-weight:600}
+  .foot b{color:#dfe6ef;font-weight:800}
+</style>
+</head>
+<body>
+  <div class="glow g1"></div><div class="glow g2"></div><div class="glow g3"></div>
+  <div class="wrap">
+    <div class="tag">上海出发 · 281 个目的地</div>
+    <h1>里程票<br>怎么换<em>才不亏</em>？</h1>
+    <div class="sub">把 <b>里程 + 税费 + 现金票价 + 高铁</b><br>放进同一张表，算给你看</div>
+
+    <div class="cards">
+      <div class="card"><div class="ic i1">✈️</div>
+        <div class="ct">里程换经济舱，国内基本不划算<small>上海—北京里程价值仅 358 元/万</small></div></div>
+      <div class="card"><div class="ic i2">💺</div>
+        <div class="ct">真正的价值在公务舱<small>京沪升公务只要 +4,000 里程</small></div></div>
+      <div class="card"><div class="ic i3">🚄</div>
+        <div class="ct">1,700km 内，高铁经常赢<small>南京 ¥150 / 1.4h vs 机票 ¥370</small></div></div>
+    </div>
+
+    <div class="foot">
+      <span>开源工具 · 可直接筛选</span>
+      <span><b>国航 / 东航 / 南航</b></span>
+    </div>
+  </div>
+</body>
+</html>
